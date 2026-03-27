@@ -1,0 +1,19 @@
+{
+  "name": "trading-system-analytics",
+  "version": "0.1.0",
+  "description": "Professional trading system analytics platform - SaaS",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "devDependencies": {
+    "turbo": "^1.10.0"
+  }
+}

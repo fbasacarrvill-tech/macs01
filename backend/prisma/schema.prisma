@@ -1,0 +1,243 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========== USERS ==========
+model User {
+  id              String          @id @default(uuid())
+  email           String          @unique
+  passwordHash    String
+  firstName       String?
+  lastName        String?
+  profileImageUrl String?
+
+  // Preferences
+  preferredCurrency String        @default("USD")
+  timezone          String        @default("UTC")
+  theme             String        @default("dark")
+
+  // Status
+  isEmailVerified Boolean         @default(false)
+  isActive        Boolean         @default(true)
+  lastLogin       DateTime?
+
+  // Relationships
+  trades          Trade[]
+  strategies      Strategy[]
+  portfolio       Portfolio?
+  alerts          Alert[]
+  subscription    UserSubscription?
+  snapshots       DailySnapshot[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+
+  @@index([email])
+}
+
+// ========== ASSETS ==========
+model Asset {
+  id              String          @id @default(uuid())
+  symbol          String          @unique
+  name            String
+  assetType       String          // STOCK, FOREX, CRYPTO, etc.
+  exchange        String?
+  description     String?
+  logoUrl         String?
+  isActive        Boolean         @default(true)
+
+  trades          Trade[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([symbol])
+}
+
+// ========== STRATEGIES ==========
+model Strategy {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name                String
+  description         String?
+  riskPerTrade        Decimal?
+  targetRiskRewardRatio Decimal @default(2)
+  color               String    @default("#3B82F6")
+  isActive            Boolean   @default(true)
+
+  trades              Trade[]
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// ========== TRADES (MAIN TABLE) ==========
+model Trade {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetId             String
+  asset               Asset     @relation(fields: [assetId], references: [id])
+  strategyId          String?
+  strategy            Strategy? @relation(fields: [strategyId], references: [id])
+
+  // Entry Information
+  entryDate           DateTime
+  entryTime           String?
+  entryPrice          Decimal
+  entryQuantity       Decimal
+
+  // Exit Information
+  exitDate            DateTime?
+  exitTime            String?
+  exitPrice           Decimal?
+  exitQuantity        Decimal?
+
+  // Trade Details
+  direction           String    // LONG or SHORT
+  status              String    @default("OPEN") // OPEN, CLOSED, CANCELLED
+
+  // Calculated Metrics
+  profitLoss          Decimal?
+  profitLossPercentage Decimal?
+  roi                 Decimal?
+
+  // Risk Management
+  stopLoss            Decimal?
+  takeProfit          Decimal?
+  riskAmount          Decimal?
+  rewardAmount        Decimal?
+  riskRewardRatio     Decimal?
+
+  // Metadata
+  notes               String?
+  tags                String?
+  imageUrl            String?
+
+  closedAt            DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([assetId])
+  @@index([status])
+  @@index([entryDate])
+  @@index([userId, entryDate])
+}
+
+// ========== PORTFOLIO ==========
+model Portfolio {
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Capital
+  initialCapital      Decimal
+  currentCapital      Decimal
+  availableCapital    Decimal?
+
+  // Metrics
+  totalProfitLoss     Decimal?
+  totalROI            Decimal?
+  currentDrawdown     Decimal?
+  maxDrawdown         Decimal?
+
+  // Statistics
+  totalTrades         Int       @default(0)
+  winTrades           Int       @default(0)
+  lossTrades          Int       @default(0)
+  winRate             Decimal?
+
+  // Ratios
+  profitFactor        Decimal?
+  consecutiveWins     Int       @default(0)
+  consecutiveLosses   Int       @default(0)
+
+  lastTradeDate       DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// ========== DAILY SNAPSHOTS ==========
+model DailySnapshot {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  snapshotDate        DateTime
+  capital             Decimal
+  equity              Decimal?
+  profitLoss          Decimal?
+  drawdown            Decimal?
+  openTrades          Int?
+  closedTodayTrades   Int?
+
+  createdAt           DateTime  @default(now())
+
+  @@index([userId, snapshotDate])
+}
+
+// ========== ALERTS ==========
+model Alert {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type                String    // drawdown_warning, bad_streak, etc.
+  message             String
+  isRead              Boolean   @default(false)
+  actionUrl           String?
+
+  createdAt           DateTime  @default(now())
+  readAt              DateTime?
+
+  @@index([userId, isRead])
+}
+
+// ========== SUBSCRIPTION TIERS ==========
+model SubscriptionTier {
+  id                  String    @id @default(uuid())
+  name                String    @unique
+  price               Decimal?
+  billingPeriod       String    @default("monthly")
+  tradesPerMonth      Int?
+  features            String    // JSON string of features
+
+  subscriptions       UserSubscription[]
+
+  createdAt           DateTime  @default(now())
+}
+
+// ========== USER SUBSCRIPTIONS ==========
+model UserSubscription {
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tierId              String
+  tier                SubscriptionTier @relation(fields: [tierId], references: [id])
+
+  status              String    @default("active") // active, cancelled, expired
+  startDate           DateTime  @default(now())
+  endDate             DateTime?
+  stripeSubscriptionId String?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+}
