@@ -87,3 +87,17 @@ export const strategiesApi = {
   update: (id: string, data: unknown) => api.put(`/strategies/${id}`, data),
   delete: (id: string) => api.delete(`/strategies/${id}`),
 }
+
+// ─── Reports ─────────────────────────────────────────────────────────────────
+
+export const reportsApi = {
+  summary: (startDate?: string, endDate?: string) =>
+    api.get('/reports/summary', { params: { startDate, endDate } }),
+  exportCSV: (startDate?: string, endDate?: string) =>
+    api.get('/reports/export/csv', {
+      params: { startDate, endDate },
+      responseType: 'blob' as const,
+    }),
+  exportPDF: (startDate?: string, endDate?: string) =>
+    api.get('/reports/export/pdf', { params: { startDate, endDate } }),
+}

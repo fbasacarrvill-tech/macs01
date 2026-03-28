@@ -8,6 +8,7 @@ import {
 } from 'recharts'
 import MetricCard from '@/components/dashboard/MetricCard'
 import { analyticsApi, tradesApi } from '@/services/api'
+import { useToast } from '@/hooks/useToast'
 import { AnalyticsSummary, EquityPoint, Trade, Period } from '@/types'
 
 const PERIODS: { value: Period; label: string }[] = [
@@ -19,6 +20,7 @@ const PERIODS: { value: Period; label: string }[] = [
 ]
 
 export default function DashboardPage() {
+  const { addToast } = useToast()
   const [period, setPeriod] = useState<Period>('month')
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [equity, setEquity] = useState<EquityPoint[]>([])
@@ -39,12 +41,13 @@ export default function DashboardPage() {
         setRecentTrades(tradesRes.data.data.items)
       } catch (err) {
         console.error(err)
+        addToast('Error al cargar el dashboard', 'error')
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [period])
+  }, [period, addToast])
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

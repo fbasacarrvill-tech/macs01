@@ -10,6 +10,7 @@ import analyticsRoutes from './routes/analytics.routes'
 import assetsRoutes from './routes/assets.routes'
 import strategiesRoutes from './routes/strategies.routes'
 import usersRoutes from './routes/users.routes'
+import reportsRoutes from './routes/reports.routes'
 import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -30,6 +31,7 @@ app.use('/api/analytics', analyticsRoutes)
 app.use('/api/assets', assetsRoutes)
 app.use('/api/strategies', strategiesRoutes)
 app.use('/api/users', usersRoutes)
+app.use('/api/reports', reportsRoutes)
 
 // ─── Error Handler ───────────────────────────────────────────────────────────
 app.use(errorHandler)

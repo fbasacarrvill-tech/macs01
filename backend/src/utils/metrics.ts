@@ -215,6 +215,48 @@ function round(n: number, decimals = 2): number {
   return Math.round(n * Math.pow(10, decimals)) / Math.pow(10, decimals)
 }
 
+/**
+ * Calcula CAGR (Compound Annual Growth Rate)
+ */
+export function calcCAGR(
+  startCapital: number,
+  endCapital: number,
+  years: number,
+): number {
+  if (startCapital <= 0 || years <= 0) return 0
+  const cagr = Math.pow(endCapital / startCapital, 1 / years) - 1
+  return round(cagr * 100, 2)
+}
+
+/**
+ * Calcula Recovery Factor (cuánto tardas en recuperarte de drawdown)
+ */
+export function calcRecoveryFactor(
+  totalProfitLoss: number,
+  maxDrawdownAmount: number,
+): number {
+  if (maxDrawdownAmount === 0) return 0
+  return round(totalProfitLoss / Math.abs(maxDrawdownAmount), 2)
+}
+
+/**
+ * Calcula Profit Target (meta de ganancia mensual)
+ */
+export function calcProfitTarget(
+  currentCapital: number,
+  targetROI: number = 5, // 5% default monthly
+): number {
+  return round((currentCapital * targetROI) / 100)
+}
+
+/**
+ * Calcula Win/Loss Ratio (ganancias promedio vs pérdidas)
+ */
+export function calcWinLossRatio(averageWin: number, averageLoss: number): number {
+  if (averageLoss === 0) return 0
+  return round(Math.abs(averageWin / averageLoss), 2)
+}
+
 function defaultPeriodMetrics(): PeriodMetrics {
   return {
     totalProfitLoss: 0,
