@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingSystem Analytics - Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { @apply bg-gray-950; }
+        .card { @apply bg-gray-800 rounded-xl border border-gray-700 p-5; }
+        .btn-primary { @apply bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors; }
+        .btn-secondary { @apply bg-gray-700 hover:bg-gray-600 text-gray-100 font-medium px-4 py-2 rounded-lg transition-colors; }
+        .profit { @apply text-emerald-400; }
+        .loss { @apply text-red-400; }
+        .badge-open { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-900 text-blue-300; }
+        .badge-closed { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300; }
+        .badge-long { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-900 text-emerald-300; }
+        .badge-short { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-900 text-red-300; }
+        .tab-active { @apply bg-blue-600 text-white; }
+        .tab-inactive { @apply text-gray-400 hover:text-white; }
+    </style>
+</head>
+<body class="text-gray-100">
+    <div class="flex min-h-screen">
+        <!-- SIDEBAR -->
+        <aside class="w-60 min-h-screen bg-gray-900 border-r border-gray-800">
+            <div class="flex items-center gap-3 px-5 py-5 border-b border-gray-800">
+                <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600">
+                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-white leading-tight">TradingSystem</p>
+                    <p class="text-xs text-gray-500">Analytics</p>
+                </div>
+            </div>
+
+            <nav class="px-3 py-4 space-y-1">
+                <a href="#dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="#trades" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                    </svg>
+                    Trades
+                </a>
+                <a href="#analytics" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Analytics
+                </a>
+                <a href="#reports" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Reportes
+                </a>
+            </nav>
+
+            <div class="px-3 py-4 border-t border-gray-800 mt-auto">
+                <div class="flex items-center gap-3 px-3 py-2 rounded-lg mb-3">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-900 text-blue-300 text-sm font-semibold">
+                        JT
+                    </div>
+                    <div class="overflow-hidden">
+                        <p class="text-sm font-medium text-white truncate">John Trader</p>
+                        <p class="text-xs text-gray-500 truncate">john@example.com</p>
+                    </div>
+                </div>
+                <button class="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Cerrar sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 overflow-auto">
+            <!-- DASHBOARD VIEW -->
+            <div id="dashboard" class="p-6 max-w-7xl mx-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Dashboard</h1>
+                        <p class="text-sm text-gray-400">Resumen de tu performance</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="flex bg-gray-800 rounded-lg p-0.5">
+                            <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md font-medium">Mes</button>
+                            <button class="px-3 py-1.5 text-sm text-gray-400 hover:text-white">Año</button>
+                            <button class="px-3 py-1.5 text-sm text-gray-400 hover:text-white">Todo</button>
+                        </div>
+                        <button class="btn-primary text-sm">+ Nuevo Trade</button>
+                    </div>
+                </div>
+
+                <!-- KPI CARDS -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="card">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Total P&L</p>
+                        <p class="text-2xl font-bold profit leading-none">+$2,150</p>
+                        <p class="text-xs text-gray-500 mt-1">23 trades</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Win Rate</p>
+                        <p class="text-2xl font-bold profit leading-none">62%</p>
+                        <p class="text-xs text-gray-500 mt-1">14W / 9L</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">ROI</p>
+                        <p class="text-2xl font-bold profit leading-none">+15.3%</p>
+                        <p class="text-xs text-gray-500 mt-1">Este mes</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Profit Factor</p>
+                        <p class="text-2xl font-bold profit leading-none">2.15x</p>
+                        <p class="text-xs text-gray-500 mt-1">Excelente</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Drawdown Actual</p>
+                        <p class="text-2xl font-bold loss leading-none">-8.5%</p>
+                        <p class="text-xs text-gray-500 mt-1">Máx: -12.5%</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Avg Win / Loss</p>
+                        <p class="text-2xl font-bold text-white leading-none">$153 / $89</p>
+                        <p class="text-xs text-gray-500 mt-1">Por trade</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Expectancy</p>
+                        <p class="text-2xl font-bold profit leading-none">+$55</p>
+                        <p class="text-xs text-gray-500 mt-1">Por trade</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Sharpe Ratio</p>
+                        <p class="text-2xl font-bold profit leading-none">1.45</p>
+                        <p class="text-xs text-gray-500 mt-1">Bueno</p>
+                    </div>
+                </div>
+
+                <!-- EQUITY CURVE -->
+                <div class="card mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-semibold text-white">Curva de Capital</h2>
+                        <a href="#analytics" class="text-sm text-blue-400 hover:text-blue-300">Ver análisis completo →</a>
+                    </div>
+                    <div class="h-48 bg-gray-900/50 rounded flex items-center justify-center">
+                        <div class="text-center text-gray-500">
+                            <svg class="w-12 h-12 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                            </svg>
+                            <p class="text-sm">Gráfico de capital en tiempo real</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RECENT TRADES -->
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-semibold text-white">Trades Recientes</h2>
+                        <a href="#trades" class="text-sm text-blue-400 hover:text-blue-300">Ver todos →</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-gray-400 text-xs uppercase border-b border-gray-700">
+                                    <th class="text-left pb-3 pr-4">Fecha</th>
+                                    <th class="text-left pb-3 pr-4">Activo</th>
+                                    <th class="text-left pb-3 pr-4">Tipo</th>
+                                    <th class="text-right pb-3 pr-4">Entrada</th>
+                                    <th class="text-right pb-3 pr-4">Salida</th>
+                                    <th class="text-right pb-3 pr-4">P&L</th>
+                                    <th class="text-right pb-3">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800">
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="py-3 pr-4 text-gray-300">Mar 27</td>
+                                    <td class="py-3 pr-4 font-medium text-white">AAPL</td>
+                                    <td class="py-3 pr-4"><span class="badge-long">LONG</span></td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$150.23</td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$152.10</td>
+                                    <td class="py-3 pr-4 text-right profit font-medium">+$187</td>
+                                    <td class="py-3 text-right"><span class="badge-closed">Cerrado</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="py-3 pr-4 text-gray-300">Mar 26</td>
+                                    <td class="py-3 pr-4 font-medium text-white">EUR/USD</td>
+                                    <td class="py-3 pr-4"><span class="badge-long">LONG</span></td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$1.0842</td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$1.0891</td>
+                                    <td class="py-3 pr-4 text-right profit font-medium">+$490</td>
+                                    <td class="py-3 text-right"><span class="badge-closed">Cerrado</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="py-3 pr-4 text-gray-300">Mar 25</td>
+                                    <td class="py-3 pr-4 font-medium text-white">BTC</td>
+                                    <td class="py-3 pr-4"><span class="badge-short">SHORT</span></td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$42,100</td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$41,900</td>
+                                    <td class="py-3 pr-4 text-right profit font-medium">+$200</td>
+                                    <td class="py-3 text-right"><span class="badge-closed">Cerrado</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TRADES VIEW -->
+            <div id="trades" class="p-6 max-w-7xl mx-auto hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Trades</h1>
+                        <p class="text-sm text-gray-400">150 operaciones registradas</p>
+                    </div>
+                    <button class="btn-primary text-sm">+ Nuevo Trade</button>
+                </div>
+
+                <!-- FILTERS -->
+                <div class="card mb-5">
+                    <div class="flex flex-wrap gap-3">
+                        <select class="bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            <option>Todos los estados</option>
+                            <option>Abiertos</option>
+                            <option>Cerrados</option>
+                        </select>
+                        <select class="bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            <option>Todos los activos</option>
+                            <option>AAPL</option>
+                            <option>EURUSD</option>
+                            <option>BTC</option>
+                        </select>
+                        <input type="date" class="bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-gray-100 text-sm">
+                        <button class="btn-secondary text-sm">Reset</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-gray-400 text-xs uppercase border-b border-gray-700">
+                                    <th class="text-left pb-3 pr-4">Fecha</th>
+                                    <th class="text-left pb-3 pr-4">Activo</th>
+                                    <th class="text-left pb-3 pr-4">Dirección</th>
+                                    <th class="text-right pb-3 pr-4">Entrada</th>
+                                    <th class="text-right pb-3 pr-4">Salida</th>
+                                    <th class="text-right pb-3 pr-4">P&L</th>
+                                    <th class="text-right pb-3">ROI</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800">
+                                <tr class="hover:bg-gray-800/50 cursor-pointer">
+                                    <td class="py-3 pr-4 text-gray-300">27/03/26</td>
+                                    <td class="py-3 pr-4 font-semibold text-white">AAPL</td>
+                                    <td class="py-3 pr-4"><span class="badge-long">LONG</span></td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$150.23</td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$152.10</td>
+                                    <td class="py-3 pr-4 text-right profit font-medium">+$187</td>
+                                    <td class="py-3 pr-4 text-right profit">+1.24%</td>
+                                </tr>
+                                <tr class="hover:bg-gray-800/50 cursor-pointer">
+                                    <td class="py-3 pr-4 text-gray-300">26/03/26</td>
+                                    <td class="py-3 pr-4 font-semibold text-white">EUR/USD</td>
+                                    <td class="py-3 pr-4"><span class="badge-long">LONG</span></td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$1.0842</td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$1.0891</td>
+                                    <td class="py-3 pr-4 text-right profit font-medium">+$490</td>
+                                    <td class="py-3 pr-4 text-right profit">+0.45%</td>
+                                </tr>
+                                <tr class="hover:bg-gray-800/50 cursor-pointer">
+                                    <td class="py-3 pr-4 text-gray-300">24/03/26</td>
+                                    <td class="py-3 pr-4 font-semibold text-white">TSLA</td>
+                                    <td class="py-3 pr-4"><span class="badge-long">LONG</span></td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$250.00</td>
+                                    <td class="py-3 pr-4 text-right text-gray-300">$248.00</td>
+                                    <td class="py-3 pr-4 text-right loss font-medium">-$50</td>
+                                    <td class="py-3 pr-4 text-right loss">-0.8%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANALYTICS VIEW -->
+            <div id="analytics" class="p-6 max-w-7xl mx-auto hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-xl font-bold text-white">Analytics</h1>
+                    <div class="flex bg-gray-800 rounded-lg p-0.5">
+                        <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md font-medium">Mes</button>
+                        <button class="px-3 py-1.5 text-sm text-gray-400 hover:text-white">Año</button>
+                        <button class="px-3 py-1.5 text-sm text-gray-400 hover:text-white">Todo</button>
+                    </div>
+                </div>
+
+                <!-- TABS -->
+                <div class="flex gap-1 bg-gray-800 p-1 rounded-lg mb-6 w-fit">
+                    <button class="px-4 py-1.5 text-sm bg-gray-700 text-white rounded-md font-medium">Resumen</button>
+                    <button class="px-4 py-1.5 text-sm text-gray-400 hover:text-white">Por Activo</button>
+                    <button class="px-4 py-1.5 text-sm text-gray-400 hover:text-white">Drawdown</button>
+                </div>
+
+                <!-- DISTRIBUTION CHARTS -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+                    <div class="card">
+                        <h2 class="font-semibold text-white mb-4">Distribución de Trades</h2>
+                        <div class="flex items-center gap-6">
+                            <div class="w-40 h-40 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+                                62%
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                    <span class="text-gray-400">Ganadores:</span>
+                                    <span class="text-white font-medium">14</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                    <span class="text-gray-400">Perdedores:</span>
+                                    <span class="text-white font-medium">9</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="font-semibold text-white mb-4">Rachas</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-400">Max wins consecutivos</span>
+                                    <span class="text-emerald-400 font-semibold">5</span>
+                                </div>
+                                <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-emerald-500 rounded-full" style="width: 50%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-400">Max losses consecutivos</span>
+                                    <span class="text-red-400 font-semibold">3</span>
+                                </div>
+                                <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-red-500 rounded-full" style="width: 30%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BY ASSET TABLE -->
+                <div class="card">
+                    <h2 class="font-semibold text-white mb-4">Performance por Activo</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-gray-400 text-xs uppercase border-b border-gray-700">
+                                    <th class="text-left pb-3 pr-6">Activo</th>
+                                    <th class="text-right pb-3 pr-6">Trades</th>
+                                    <th class="text-right pb-3 pr-6">Win Rate</th>
+                                    <th class="text-right pb-3 pr-6">P&L Total</th>
+                                    <th class="text-right pb-3">Profit Factor</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800">
+                                <tr class="hover:bg-gray-800/40">
+                                    <td class="py-3 pr-6">
+                                        <p class="font-semibold text-white">AAPL</p>
+                                        <p class="text-xs text-gray-500">STOCK</p>
+                                    </td>
+                                    <td class="py-3 pr-6 text-right"><span class="text-gray-300">8</span> <span class="text-xs text-gray-500">(6W/2L)</span></td>
+                                    <td class="py-3 pr-6 text-right font-medium text-emerald-400">75%</td>
+                                    <td class="py-3 pr-6 text-right font-medium profit">+$450</td>
+                                    <td class="py-3 text-right font-medium text-emerald-400">2.5x</td>
+                                </tr>
+                                <tr class="hover:bg-gray-800/40">
+                                    <td class="py-3 pr-6">
+                                        <p class="font-semibold text-white">EUR/USD</p>
+                                        <p class="text-xs text-gray-500">FOREX</p>
+                                    </td>
+                                    <td class="py-3 pr-6 text-right"><span class="text-gray-300">7</span> <span class="text-xs text-gray-500">(4W/3L)</span></td>
+                                    <td class="py-3 pr-6 text-right font-medium text-yellow-400">57%</td>
+                                    <td class="py-3 pr-6 text-right font-medium profit">+$225</td>
+                                    <td class="py-3 text-right font-medium text-yellow-400">1.8x</td>
+                                </tr>
+                                <tr class="hover:bg-gray-800/40">
+                                    <td class="py-3 pr-6">
+                                        <p class="font-semibold text-white">BTC</p>
+                                        <p class="text-xs text-gray-500">CRYPTO</p>
+                                    </td>
+                                    <td class="py-3 pr-6 text-right"><span class="text-gray-300">5</span> <span class="text-xs text-gray-500">(2W/3L)</span></td>
+                                    <td class="py-3 pr-6 text-right font-medium text-red-400">40%</td>
+                                    <td class="py-3 pr-6 text-right font-medium loss">-$100</td>
+                                    <td class="py-3 text-right font-medium text-red-400">0.6x</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REPORTS VIEW -->
+            <div id="reports" class="p-6 max-w-4xl mx-auto hidden">
+                <h1 class="text-xl font-bold text-white mb-6">Reportes</h1>
+
+                <div class="card mb-6">
+                    <div class="flex flex-col sm:flex-row gap-4 items-end">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Desde</label>
+                            <input type="date" value="2026-03-01" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-gray-100">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Hasta</label>
+                            <input type="date" value="2026-03-27" class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-gray-100">
+                        </div>
+                        <button class="btn-primary whitespace-nowrap">Generar</button>
+                    </div>
+                </div>
+
+                <!-- REPORT CARDS -->
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    <div class="card">
+                        <p class="text-xs text-gray-400 uppercase mb-2">Total Trades</p>
+                        <p class="text-2xl font-bold text-white">23</p>
+                        <p class="text-xs text-gray-500 mt-1">14W / 9L</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs text-gray-400 uppercase mb-2">Win Rate</p>
+                        <p class="text-2xl font-bold text-emerald-400">62.1%</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs text-gray-400 uppercase mb-2">Total P&L</p>
+                        <p class="text-2xl font-bold text-emerald-400">+$2,150</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs text-gray-400 uppercase mb-2">ROI</p>
+                        <p class="text-2xl font-bold text-emerald-400">+15.3%</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs text-gray-400 uppercase mb-2">Monthly ROI</p>
+                        <p class="text-2xl font-bold text-emerald-400">+15.3%</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-xs text-gray-400 uppercase mb-2">Profit Factor</p>
+                        <p class="text-2xl font-bold text-emerald-400">2.15x</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="card">
+                        <h2 class="font-semibold text-white mb-4">Métricas Principales</h2>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Promedio Ganadores</span>
+                                <span class="text-gray-200 font-medium">$153.57</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Promedio Perdedores</span>
+                                <span class="text-gray-200 font-medium">-$85.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Expectancy</span>
+                                <span class="text-gray-200 font-medium">$55.43</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Max Wins Consecutivos</span>
+                                <span class="text-gray-200 font-medium">5</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="font-semibold text-white mb-4">Período</h2>
+                        <div class="space-y-3 text-sm mb-6">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Desde</span>
+                                <span class="text-gray-200 font-medium">2026-03-01</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Hasta</span>
+                                <span class="text-gray-200 font-medium">2026-03-27</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Días</span>
+                                <span class="text-gray-200 font-medium">27 días</span>
+                            </div>
+                        </div>
+                        <button class="btn-secondary w-full text-sm">📥 Descargar CSV</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Simple tab navigation
+        document.querySelectorAll('[href^="#"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('[id="dashboard"], [id="trades"], [id="analytics"], [id="reports"]').forEach(el => {
+                    el.classList.add('hidden');
+                });
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) target.classList.remove('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
