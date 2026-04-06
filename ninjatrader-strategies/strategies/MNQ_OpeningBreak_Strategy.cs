@@ -1,5 +1,6 @@
 /*
- * MNQ Opening Break Strategy - SIMPLIFIED FOR TESTING
+ * PROFESSIONAL ORB (Opening Range Breakout) Strategy
+ * For MNQ - Micro E-mini Nasdaq-100 Futures
  * NinjaTrader 8 Compatible
  */
 
@@ -15,19 +16,30 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
     public class MNQOpeningBreakStrategy : Strategy
     {
-        private int fastEmaLength = 5;
-        private int slowEmaLength = 13;
-        private int stopLossPips = 20;
-        private int takeProfitPips = 40;
+        // ===== ORB PARAMETERS =====
+        private int orbMinutes = 15;               // Opening Range period (15 min)
+        private int breakoutConfirmPips = 2;       // Pips needed to confirm breakout
+        private int stopLossPips = 25;             // Stop Loss (Risk)
+        private int takeProfitPips = 75;           // Take Profit (Reward = 3x risk)
+
+        // ===== SESSION PARAMETERS =====
         private int sessionStartHour = 9;
         private int sessionStartMinute = 30;
-        private int sessionDurationMinutes = 60;
+        private int sessionEndHour = 16;
+        private int sessionEndMinute = 0;
+
+        // ===== INTERNAL STATE =====
+        private double orbHigh = 0;
+        private double orbLow = 0;
+        private bool orbCalculated = false;
+        private DateTime orbStartTime;
+        private int orbBarCount = 0;
 
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
             {
-                Description = @"MNQ Opening Break Strategy";
+                Description = @"Professional ORB Strategy - Opening Range Breakout";
                 Name = "MNQ Opening Break Strategy";
                 Calculate = Calculate.OnBarClose;
                 EntriesPerDirection = 1;
@@ -52,140 +64,143 @@ namespace NinjaTrader.NinjaScript.Strategies
             if (BarsInProgress != 1)
                 return;
 
-            // Obtener hora actual
             DateTime currentTime = Time[0];
             int currentHour = currentTime.Hour;
             int currentMinute = currentTime.Minute;
+            double close = Close[0];
+            double high = High[0];
+            double low = Low[0];
 
-            // Calcular hora y minuto de fin
-            int sessionEndHour = sessionStartHour;
-            int sessionEndMinute = sessionStartMinute + sessionDurationMinutes;
-            if (sessionEndMinute >= 60)
+            // Verificar si estamos en horario de sesión
+            bool inSession = false;
+            if (currentHour > sessionStartHour || (currentHour == sessionStartHour && currentMinute >= sessionStartMinute))
             {
-                sessionEndHour += sessionEndMinute / 60;
-                sessionEndMinute = sessionEndMinute % 60;
+                if (currentHour < sessionEndHour || (currentHour == sessionEndHour && currentMinute < sessionEndMinute))
+                {
+                    inSession = true;
+                }
             }
 
-            // Verificar si estamos en el horario de sesión configurado
-            bool isSessionTime = false;
-            if (currentHour == sessionStartHour && currentMinute >= sessionStartMinute)
+            // Cierre automático al final de sesión
+            if (!inSession && Position.MarketPosition != MarketPosition.Flat)
             {
-                if (sessionEndHour == sessionStartHour)
+                ExitLong("SessionEnd");
+                ExitShort("SessionEnd");
+                orbCalculated = false;
+            }
+
+            if (!inSession)
+                return;
+
+            // ===== CALCULAR OPENING RANGE (Primeros 15 minutos) =====
+            if (!orbCalculated)
+            {
+                if (orbBarCount == 0)
                 {
-                    // Misma hora
-                    isSessionTime = (currentMinute < sessionEndMinute);
+                    orbStartTime = currentTime;
+                    orbHigh = high;
+                    orbLow = low;
+                    orbBarCount = 1;
                 }
                 else
                 {
-                    // Diferentes horas
-                    isSessionTime = true;
+                    orbBarCount++;
+                    orbHigh = Math.Max(orbHigh, high);
+                    orbLow = Math.Min(orbLow, low);
+
+                    // Verificar si completamos el ORB (15 minutos = 15 barras)
+                    int minutesElapsed = (int)(currentTime - orbStartTime).TotalMinutes;
+                    if (minutesElapsed >= orbMinutes)
+                    {
+                        orbCalculated = true;
+                    }
                 }
             }
-            else if (currentHour > sessionStartHour && currentHour < sessionEndHour)
+
+            // ===== ESPERAR RUPTURA DEL ORB =====
+            if (orbCalculated && CurrentBar > 20)
             {
-                isSessionTime = true;
-            }
-            else if (currentHour == sessionEndHour && currentMinute < sessionEndMinute)
-            {
-                isSessionTime = true;
-            }
+                double bullishBreakpoint = orbHigh + (breakoutConfirmPips * TickSize);
+                double bearishBreakpoint = orbLow - (breakoutConfirmPips * TickSize);
 
-            if (!isSessionTime)
-            {
-                // Cerrar posiciones fuera de horario
-                if (Position.MarketPosition == MarketPosition.Long)
-                    ExitLong("SessionEnd");
-                if (Position.MarketPosition == MarketPosition.Short)
-                    ExitShort("SessionEnd");
-                return;
-            }
-
-            // Necesita 20 barras mínimo
-            if (CurrentBar < 20)
-                return;
-
-            // Obtener datos
-            double close = Close[0];
-            double open = Open[0];
-
-            // EMA
-            double ema5 = EMA(Close, fastEmaLength)[0];
-            double ema13 = EMA(Close, slowEmaLength)[0];
-
-            // ENTRADA LARGA: Si el precio está por encima de ambas EMAs
-            if (Position.MarketPosition == MarketPosition.Flat)
-            {
-                if (close > ema5 && ema5 > ema13)
+                // ENTRADA LARGA: Precio rompe por encima del ORB High
+                if (Position.MarketPosition == MarketPosition.Flat && close > bullishBreakpoint)
                 {
-                    EnterLong("Long");
+                    EnterLong("ORB_Long");
                 }
-                // ENTRADA CORTA: Si el precio está por debajo de ambas EMAs
-                else if (close < ema5 && ema5 < ema13)
+
+                // ENTRADA CORTA: Precio rompe por debajo del ORB Low
+                if (Position.MarketPosition == MarketPosition.Flat && close < bearishBreakpoint)
                 {
-                    EnterShort("Short");
+                    EnterShort("ORB_Short");
                 }
             }
 
-            // STOP LOSS Y TAKE PROFIT - POSICIÓN LARGA
+            // ===== GESTIÓN DE POSICIONES =====
             if (Position.MarketPosition == MarketPosition.Long)
             {
                 double entryPrice = Position.AveragePrice;
-                double currentPnL = close - entryPrice;
-                double pnLInPips = currentPnL / TickSize;
+                double currentPnL = (close - entryPrice) / TickSize;
 
                 // Take Profit
-                if (pnLInPips >= takeProfitPips)
+                if (currentPnL >= takeProfitPips)
                 {
                     ExitLong("TP");
                 }
                 // Stop Loss
-                else if (pnLInPips <= -stopLossPips)
+                else if (currentPnL <= -stopLossPips)
                 {
                     ExitLong("SL");
                 }
             }
 
-            // STOP LOSS Y TAKE PROFIT - POSICIÓN CORTA
             if (Position.MarketPosition == MarketPosition.Short)
             {
                 double entryPrice = Position.AveragePrice;
-                double currentPnL = entryPrice - close;
-                double pnLInPips = currentPnL / TickSize;
+                double currentPnL = (entryPrice - close) / TickSize;
 
                 // Take Profit
-                if (pnLInPips >= takeProfitPips)
+                if (currentPnL >= takeProfitPips)
                 {
                     ExitShort("TP");
                 }
                 // Stop Loss
-                else if (pnLInPips <= -stopLossPips)
+                else if (currentPnL <= -stopLossPips)
                 {
                     ExitShort("SL");
                 }
             }
+
+            // ===== REINICIAR ORB AL SIGUIENTE DÍA =====
+            if (currentHour == sessionStartHour && currentMinute == sessionStartMinute && orbCalculated)
+            {
+                orbCalculated = false;
+                orbBarCount = 0;
+            }
         }
 
+        // ===== PROPIEDADES PÚBLICAS =====
         [NinjaScriptProperty]
-        [Range(3, 20)]
-        [Display(Name = "Fast EMA", GroupName = "Parameters", Order = 1)]
-        public int FastEmaLength
+        [Range(5, 60)]
+        [Display(Name = "ORB Period (Minutes)", GroupName = "ORB Settings", Order = 1)]
+        public int OrbMinutes
         {
-            get { return fastEmaLength; }
-            set { fastEmaLength = value; }
+            get { return orbMinutes; }
+            set { orbMinutes = value; }
         }
 
         [NinjaScriptProperty]
-        [Range(10, 30)]
-        [Display(Name = "Slow EMA", GroupName = "Parameters", Order = 2)]
-        public int SlowEmaLength
+        [Range(1, 10)]
+        [Display(Name = "Breakout Confirmation Pips", GroupName = "ORB Settings", Order = 2)]
+        public int BreakoutConfirmPips
         {
-            get { return slowEmaLength; }
-            set { slowEmaLength = value; }
+            get { return breakoutConfirmPips; }
+            set { breakoutConfirmPips = value; }
         }
 
         [NinjaScriptProperty]
-        [Range(10, 50)]
-        [Display(Name = "Stop Loss Pips", GroupName = "Risk", Order = 3)]
+        [Range(10, 100)]
+        [Display(Name = "Stop Loss Pips", GroupName = "Risk Management", Order = 3)]
         public int StopLossPips
         {
             get { return stopLossPips; }
@@ -193,8 +208,8 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
 
         [NinjaScriptProperty]
-        [Range(20, 100)]
-        [Display(Name = "Take Profit Pips", GroupName = "Risk", Order = 4)]
+        [Range(20, 300)]
+        [Display(Name = "Take Profit Pips", GroupName = "Risk Management", Order = 4)]
         public int TakeProfitPips
         {
             get { return takeProfitPips; }
@@ -220,12 +235,21 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
 
         [NinjaScriptProperty]
-        [Range(1, 480)]
-        [Display(Name = "Session Duration Minutes", GroupName = "Session Time", Order = 7)]
-        public int SessionDurationMinutes
+        [Range(0, 23)]
+        [Display(Name = "Session End Hour", GroupName = "Session Time", Order = 7)]
+        public int SessionEndHour
         {
-            get { return sessionDurationMinutes; }
-            set { sessionDurationMinutes = value; }
+            get { return sessionEndHour; }
+            set { sessionEndHour = value; }
+        }
+
+        [NinjaScriptProperty]
+        [Range(0, 59)]
+        [Display(Name = "Session End Minute", GroupName = "Session Time", Order = 8)]
+        public int SessionEndMinute
+        {
+            get { return sessionEndMinute; }
+            set { sessionEndMinute = value; }
         }
     }
 }
