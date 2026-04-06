@@ -58,7 +58,6 @@ namespace NinjaTrader.NinjaScript.Strategies
         private EMA fastEma;
         private EMA slowEma;
         private SMA volumeSma;
-        private HMA heightWeightedMovingAverage;
 
         #endregion
 
@@ -365,6 +364,33 @@ namespace NinjaTrader.NinjaScript.Strategies
         {
             get { return takeProfitPips; }
             set { takeProfitPips = Math.Max(1, value); }
+        }
+
+        [NinjaScriptProperty]
+        [Range(5, 15)]
+        [Display(Name = "MACD Signal", GroupName = "Indicadores", Order = 7)]
+        public int MACDSignal
+        {
+            get { return macdSignal; }
+            set { macdSignal = Math.Max(1, value); }
+        }
+
+        [NinjaScriptProperty]
+        [Range(10, 50)]
+        [Display(Name = "Volume SMA", GroupName = "Indicadores", Order = 8)]
+        public int VolumeSMA
+        {
+            get { return volumeSMA; }
+            set { volumeSMA = Math.Max(1, value); }
+        }
+
+        [NinjaScriptProperty]
+        [Range(30, 120)]
+        [Display(Name = "Session End Minute", GroupName = "Horario", Order = 9)]
+        public int SessionEndMinute
+        {
+            get { return sessionEndMinute; }
+            set { sessionEndMinute = Math.Max(30, value); }
         }
 
         #endregion
