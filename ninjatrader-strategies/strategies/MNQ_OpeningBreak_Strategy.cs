@@ -1,17 +1,13 @@
 /*
  * MNQ Opening Break Strategy - Micro E-mini Nasdaq-100 Futures
- * Versión Corregida para NinjaTrader 8
+ * Simple Version - NinjaTrader 8 Compatible
  */
 
 #region Using declarations
 using System;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using NinjaTrader.Cbi;
-using NinjaTrader.Gui;
-using NinjaTrader.Gui.Tools;
 using NinjaTrader.Data;
-using NinjaTrader.Core.FloatingPoint;
 using NinjaTrader.Core;
 #endregion
 
@@ -19,18 +15,10 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
     public class MNQOpeningBreakStrategy : Strategy
     {
-        // ===== PARÁMETROS DE CONFIGURACIÓN =====
-        private int sessionStartHour = 9;
-        private int sessionStartMinute = 30;
-        private int sessionEndMinute = 60;
-
-        // ===== PARÁMETROS DE INDICADORES =====
         private int fastEmaLength = 5;
         private int slowEmaLength = 13;
         private int stopLossPips = 20;
         private int takeProfitPips = 40;
-
-        // ===== ESTADO =====
         private bool sessionOpen = false;
 
         protected override void OnStateChange()
@@ -52,57 +40,43 @@ namespace NinjaTrader.NinjaScript.Strategies
             }
             else if (State == State.Configure)
             {
-                // Agregar series de datos de 1 minuto
                 AddDataSeries(Data.BarsPeriodType.Minute, 1);
-            }
-            else if (State == State.DataLoaded)
-            {
-                // Estrategia lista
             }
         }
 
         protected override void OnBarUpdate()
         {
-            // Solo operar en timeframe de 1 minuto
             if (BarsInProgress != 1)
                 return;
 
-            // Obtener hora actual
             DateTime currentTime = Time[0];
             int currentHour = currentTime.Hour;
             int currentMinute = currentTime.Minute;
 
-            // Verificar si estamos en horario de sesión (9:30-10:00 AM ET)
-            if (currentHour == sessionStartHour &&
-                currentMinute >= sessionStartMinute &&
-                currentMinute < sessionStartMinute + sessionEndMinute)
+            // Session control: 9:30-10:00 AM ET
+            if (currentHour == 9 && currentMinute >= 30 && currentMinute < 90)
             {
                 sessionOpen = true;
             }
             else
             {
                 sessionOpen = false;
-
-                // Cerrar posiciones fuera de sesión
                 if (Position.MarketPosition != MarketPosition.Flat)
                 {
-                    ExitLong("ExitSession");
-                    ExitShort("ExitSession");
+                    ExitLong("SessionEnd");
+                    ExitShort("SessionEnd");
                 }
                 return;
             }
 
-            // Solo si hay datos suficientes
             if (CurrentBar < 20 || !sessionOpen)
                 return;
 
-            // Calcular valores de indicadores
             double close = Close[0];
             double ema5 = EMA(Close, fastEmaLength)[0];
             double ema13 = EMA(Close, slowEmaLength)[0];
-            double volume = Volume[0];
 
-            // Obtener máximo y mínimo de últimas 5 barras
+            // Get High/Low of last 5 bars
             double high5 = High[0];
             double low5 = Low[0];
             for (int i = 1; i < 5 && i < CurrentBar; i++)
@@ -111,58 +85,47 @@ namespace NinjaTrader.NinjaScript.Strategies
                 low5 = Math.Min(low5, Low[i]);
             }
 
-            // LÓGICA DE ENTRADA ALCISTA
-            if (Position.MarketPosition == MarketPosition.Flat &&
-                close > high5 &&
-                ema5 > ema13)
+            // Long Entry
+            if (Position.MarketPosition == MarketPosition.Flat && close > high5 && ema5 > ema13)
             {
-                EnterLong("LongEntry");
+                EnterLong("Long");
             }
 
-            // LÓGICA DE ENTRADA BAJISTA
-            if (Position.MarketPosition == MarketPosition.Flat &&
-                close < low5 &&
-                ema5 < ema13)
+            // Short Entry
+            if (Position.MarketPosition == MarketPosition.Flat && close < low5 && ema5 < ema13)
             {
-                EnterShort("ShortEntry");
+                EnterShort("Short");
             }
 
-            // Gestión de Stop Loss y Take Profit
+            // Stop Loss and Take Profit
             if (Position.MarketPosition == MarketPosition.Long)
             {
                 double entryPrice = Position.AveragePrice;
-                double stopPrice = entryPrice - (stopLossPips * TickSize);
-                double takePrice = entryPrice + (takeProfitPips * TickSize);
-
-                if (close <= stopPrice)
-                    ExitLong("StopLoss");
-                else if (close >= takePrice)
-                    ExitLong("TakeProfit");
+                if (close <= entryPrice - (stopLossPips * TickSize))
+                    ExitLong("SL");
+                if (close >= entryPrice + (takeProfitPips * TickSize))
+                    ExitLong("TP");
             }
 
             if (Position.MarketPosition == MarketPosition.Short)
             {
                 double entryPrice = Position.AveragePrice;
-                double stopPrice = entryPrice + (stopLossPips * TickSize);
-                double takePrice = entryPrice - (takeProfitPips * TickSize);
-
-                if (close >= stopPrice)
-                    ExitShort("StopLoss");
-                else if (close <= takePrice)
-                    ExitShort("TakeProfit");
+                if (close >= entryPrice + (stopLossPips * TickSize))
+                    ExitShort("SL");
+                if (close <= entryPrice - (takeProfitPips * TickSize))
+                    ExitShort("TP");
             }
 
-            // Cierre automático al final de la sesión
-            if (currentMinute >= (sessionStartMinute + sessionEndMinute - 2))
+            // Close at end of session
+            if (currentMinute >= 58)
             {
                 if (Position.MarketPosition == MarketPosition.Long)
-                    ExitLong("SessionClose");
+                    ExitLong("Close");
                 if (Position.MarketPosition == MarketPosition.Short)
-                    ExitShort("SessionClose");
+                    ExitShort("Close");
             }
         }
 
-        // ===== PROPIEDADES PÚBLICAS =====
         [NinjaScriptProperty]
         [Range(3, 20)]
         [Display(Name = "Fast EMA", GroupName = "Parameters", Order = 1)]
