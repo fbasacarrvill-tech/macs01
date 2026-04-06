@@ -45,14 +45,10 @@ namespace NinjaTrader.NinjaScript.Strategies
                 IsExitOnSessionCloseStrategy = true;
                 ExitOnSessionCloseSeconds = 30;
                 IsFillLimitOnTouch = false;
-                MaximumBarsLookBack = MaximumBarsLookBack.TwentyBars;
                 OrderFillResolution = OrderFillResolution.Standard;
                 Slippage = 2;
-                StartBehavior = StartBehavior.WaitForFirstBarClose;
                 TimeInForce = TimeInForce.Day;
                 TraceOrders = false;
-                RealtimeErrorHandling = RealtimeErrorHandling.StopCancelCloseStrategy;
-                IsInstantiatedOnEachOptimizationIteration = true;
             }
             else if (State == State.Configure)
             {
@@ -61,12 +57,7 @@ namespace NinjaTrader.NinjaScript.Strategies
             }
             else if (State == State.DataLoaded)
             {
-                // Agregar indicadores
-                AddChartIndicator(EMA(Close, fastEmaLength));
-                AddChartIndicator(EMA(Close, slowEmaLength));
-
-                SetProfitTarget(CalculationMode.Pips, takeProfitPips);
-                SetStopLoss(CalculationMode.Pips, stopLossPips);
+                // Estrategia lista
             }
         }
 
@@ -134,6 +125,31 @@ namespace NinjaTrader.NinjaScript.Strategies
                 ema5 < ema13)
             {
                 EnterShort("ShortEntry");
+            }
+
+            // Gestión de Stop Loss y Take Profit
+            if (Position.MarketPosition == MarketPosition.Long)
+            {
+                double entryPrice = Position.AveragePrice;
+                double stopPrice = entryPrice - (stopLossPips * TickSize);
+                double takePrice = entryPrice + (takeProfitPips * TickSize);
+
+                if (close <= stopPrice)
+                    ExitLong("StopLoss");
+                else if (close >= takePrice)
+                    ExitLong("TakeProfit");
+            }
+
+            if (Position.MarketPosition == MarketPosition.Short)
+            {
+                double entryPrice = Position.AveragePrice;
+                double stopPrice = entryPrice + (stopLossPips * TickSize);
+                double takePrice = entryPrice - (takeProfitPips * TickSize);
+
+                if (close >= stopPrice)
+                    ExitShort("StopLoss");
+                else if (close <= takePrice)
+                    ExitShort("TakeProfit");
             }
 
             // Cierre automático al final de la sesión
