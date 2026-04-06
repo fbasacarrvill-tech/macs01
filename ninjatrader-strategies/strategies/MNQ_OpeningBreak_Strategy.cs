@@ -1,7 +1,13 @@
 /*
- * PROFESSIONAL ORB (Opening Range Breakout) Strategy
+ * PROFESSIONAL ORB (Opening Range Breakout) Strategy - IMPROVED
  * For MNQ - Micro E-mini Nasdaq-100 Futures
  * NinjaTrader 8 Compatible
+ *
+ * Improvements:
+ * - Daily Loss Limit (stops trading after losing X)
+ * - Trailing Stop (protects profits)
+ * - Volatility Filter (avoids extreme volatility)
+ * - Better Risk Management
  */
 
 #region Using declarations
@@ -21,6 +27,12 @@ namespace NinjaTrader.NinjaScript.Strategies
         private int breakoutConfirmPips = 2;       // Pips needed to confirm breakout
         private int stopLossPips = 25;             // Stop Loss (Risk)
         private int takeProfitPips = 75;           // Take Profit (Reward = 3x risk)
+        private int trailingStopPips = 15;         // Trailing Stop (protects profit)
+
+        // ===== RISK MANAGEMENT =====
+        private double maxDailyLossPercent = 2.0;  // Max 2% loss per day before stopping
+        private double dailyLossLimit = 0;
+        private double dailyPnL = 0;
 
         // ===== SESSION PARAMETERS =====
         private int sessionStartHour = 9;
@@ -34,12 +46,15 @@ namespace NinjaTrader.NinjaScript.Strategies
         private bool orbCalculated = false;
         private DateTime orbStartTime;
         private int orbBarCount = 0;
+        private DateTime lastTradeDateForStats;
+        private double entryPrice = 0;
+        private int tradeDirection = 0; // 1 = long, -1 = short
 
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
             {
-                Description = @"Professional ORB Strategy - Opening Range Breakout";
+                Description = @"Professional ORB Strategy - Opening Range Breakout (IMPROVED)";
                 Name = "MNQ Opening Break Strategy";
                 Calculate = Calculate.OnBarClose;
                 EntriesPerDirection = 1;
@@ -81,6 +96,13 @@ namespace NinjaTrader.NinjaScript.Strategies
                 }
             }
 
+            // ===== RESET DAILY P&L AT BEGINNING OF SESSION =====
+            if (inSession && currentHour == sessionStartHour && currentMinute == sessionStartMinute)
+            {
+                dailyPnL = 0;
+                lastTradeDateForStats = currentTime;
+            }
+
             // Cierre automático al final de sesión
             if (!inSession && Position.MarketPosition != MarketPosition.Flat)
             {
@@ -91,6 +113,33 @@ namespace NinjaTrader.NinjaScript.Strategies
 
             if (!inSession)
                 return;
+
+            // ===== UPDATE DAILY P&L =====
+            if (Position.MarketPosition != MarketPosition.Flat)
+            {
+                double currentPnL = 0;
+                if (Position.MarketPosition == MarketPosition.Long)
+                {
+                    currentPnL = (close - entryPrice) * Position.Quantity;
+                }
+                else
+                {
+                    currentPnL = (entryPrice - close) * Position.Quantity;
+                }
+                dailyPnL = currentPnL;
+            }
+
+            // ===== CHECK DAILY LOSS LIMIT =====
+            // Si calculamos límite basado en capital inicial (asumimos $100,000)
+            dailyLossLimit = 100000 * (maxDailyLossPercent / 100);
+
+            if (dailyPnL < -dailyLossLimit && Position.MarketPosition != MarketPosition.Flat)
+            {
+                // Hemos perdido más del límite diario permitido
+                ExitLong("DailyLossLimit");
+                ExitShort("DailyLossLimit");
+                return; // No entrar en más operaciones hoy
+            }
 
             // ===== CALCULAR OPENING RANGE (Primeros 15 minutos) =====
             if (!orbCalculated)
@@ -117,8 +166,15 @@ namespace NinjaTrader.NinjaScript.Strategies
                 }
             }
 
+            // ===== VOLATILITY FILTER (evita volatilidad extrema) =====
+            double orbRange = orbHigh - orbLow;
+            double avgRange = (orbRange > 0) ? orbRange : 50; // Rango mínimo
+
+            // Si el rango es extremadamente grande, evitar tradear
+            bool isExtremeVolatility = (orbRange > 200); // MNQ muy volátil
+
             // ===== ESPERAR RUPTURA DEL ORB =====
-            if (orbCalculated && CurrentBar > 20)
+            if (orbCalculated && CurrentBar > 20 && !isExtremeVolatility && dailyPnL > -dailyLossLimit)
             {
                 double bullishBreakpoint = orbHigh + (breakoutConfirmPips * TickSize);
                 double bearishBreakpoint = orbLow - (breakoutConfirmPips * TickSize);
@@ -127,47 +183,67 @@ namespace NinjaTrader.NinjaScript.Strategies
                 if (Position.MarketPosition == MarketPosition.Flat && close > bullishBreakpoint)
                 {
                     EnterLong("ORB_Long");
+                    entryPrice = close;
+                    tradeDirection = 1;
                 }
 
                 // ENTRADA CORTA: Precio rompe por debajo del ORB Low
                 if (Position.MarketPosition == MarketPosition.Flat && close < bearishBreakpoint)
                 {
                     EnterShort("ORB_Short");
+                    entryPrice = close;
+                    tradeDirection = -1;
                 }
             }
 
-            // ===== GESTIÓN DE POSICIONES =====
+            // ===== GESTIÓN DE POSICIONES CON TRAILING STOP =====
             if (Position.MarketPosition == MarketPosition.Long)
             {
-                double entryPrice = Position.AveragePrice;
-                double currentPnL = (close - entryPrice) / TickSize;
+                double currentPnLPips = (close - entryPrice) / TickSize;
 
                 // Take Profit
-                if (currentPnL >= takeProfitPips)
+                if (currentPnLPips >= takeProfitPips)
                 {
                     ExitLong("TP");
                 }
-                // Stop Loss
-                else if (currentPnL <= -stopLossPips)
+                // Stop Loss (normal)
+                else if (currentPnLPips <= -stopLossPips)
                 {
                     ExitLong("SL");
+                }
+                // Trailing Stop (protege ganancias)
+                else if (currentPnLPips > trailingStopPips && currentPnLPips < takeProfitPips)
+                {
+                    double trailingStopPrice = close - (trailingStopPips * TickSize);
+                    if (close <= trailingStopPrice)
+                    {
+                        ExitLong("TrailingStop");
+                    }
                 }
             }
 
             if (Position.MarketPosition == MarketPosition.Short)
             {
-                double entryPrice = Position.AveragePrice;
-                double currentPnL = (entryPrice - close) / TickSize;
+                double currentPnLPips = (entryPrice - close) / TickSize;
 
                 // Take Profit
-                if (currentPnL >= takeProfitPips)
+                if (currentPnLPips >= takeProfitPips)
                 {
                     ExitShort("TP");
                 }
-                // Stop Loss
-                else if (currentPnL <= -stopLossPips)
+                // Stop Loss (normal)
+                else if (currentPnLPips <= -stopLossPips)
                 {
                     ExitShort("SL");
+                }
+                // Trailing Stop (protege ganancias)
+                else if (currentPnLPips > trailingStopPips && currentPnLPips < takeProfitPips)
+                {
+                    double trailingStopPrice = close + (trailingStopPips * TickSize);
+                    if (close >= trailingStopPrice)
+                    {
+                        ExitShort("TrailingStop");
+                    }
                 }
             }
 
@@ -217,8 +293,26 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
 
         [NinjaScriptProperty]
+        [Range(5, 50)]
+        [Display(Name = "Trailing Stop Pips", GroupName = "Risk Management", Order = 5)]
+        public int TrailingStopPips
+        {
+            get { return trailingStopPips; }
+            set { trailingStopPips = value; }
+        }
+
+        [NinjaScriptProperty]
+        [Range(0.5, 5.0)]
+        [Display(Name = "Max Daily Loss %", GroupName = "Risk Management", Order = 6)]
+        public double MaxDailyLossPercent
+        {
+            get { return maxDailyLossPercent; }
+            set { maxDailyLossPercent = value; }
+        }
+
+        [NinjaScriptProperty]
         [Range(0, 23)]
-        [Display(Name = "Session Start Hour", GroupName = "Session Time", Order = 5)]
+        [Display(Name = "Session Start Hour", GroupName = "Session Time", Order = 7)]
         public int SessionStartHour
         {
             get { return sessionStartHour; }
@@ -227,7 +321,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 
         [NinjaScriptProperty]
         [Range(0, 59)]
-        [Display(Name = "Session Start Minute", GroupName = "Session Time", Order = 6)]
+        [Display(Name = "Session Start Minute", GroupName = "Session Time", Order = 8)]
         public int SessionStartMinute
         {
             get { return sessionStartMinute; }
@@ -236,7 +330,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 
         [NinjaScriptProperty]
         [Range(0, 23)]
-        [Display(Name = "Session End Hour", GroupName = "Session Time", Order = 7)]
+        [Display(Name = "Session End Hour", GroupName = "Session Time", Order = 9)]
         public int SessionEndHour
         {
             get { return sessionEndHour; }
@@ -245,7 +339,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 
         [NinjaScriptProperty]
         [Range(0, 59)]
-        [Display(Name = "Session End Minute", GroupName = "Session Time", Order = 8)]
+        [Display(Name = "Session End Minute", GroupName = "Session Time", Order = 10)]
         public int SessionEndMinute
         {
             get { return sessionEndMinute; }
