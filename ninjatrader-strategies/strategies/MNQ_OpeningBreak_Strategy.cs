@@ -19,6 +19,9 @@ namespace NinjaTrader.NinjaScript.Strategies
         private int slowEmaLength = 13;
         private int stopLossPips = 20;
         private int takeProfitPips = 40;
+        private int sessionStartHour = 9;
+        private int sessionStartMinute = 30;
+        private int sessionDurationMinutes = 60;
 
         protected override void OnStateChange()
         {
@@ -54,9 +57,38 @@ namespace NinjaTrader.NinjaScript.Strategies
             int currentHour = currentTime.Hour;
             int currentMinute = currentTime.Minute;
 
-            // Solo operar entre 9:30-10:00 AM ET
-            bool isSessionTime = (currentHour == 9 && currentMinute >= 30 && currentMinute < 60) ||
-                                 (currentHour == 10 && currentMinute < 60);
+            // Calcular hora y minuto de fin
+            int sessionEndHour = sessionStartHour;
+            int sessionEndMinute = sessionStartMinute + sessionDurationMinutes;
+            if (sessionEndMinute >= 60)
+            {
+                sessionEndHour += sessionEndMinute / 60;
+                sessionEndMinute = sessionEndMinute % 60;
+            }
+
+            // Verificar si estamos en el horario de sesión configurado
+            bool isSessionTime = false;
+            if (currentHour == sessionStartHour && currentMinute >= sessionStartMinute)
+            {
+                if (sessionEndHour == sessionStartHour)
+                {
+                    // Misma hora
+                    isSessionTime = (currentMinute < sessionEndMinute);
+                }
+                else
+                {
+                    // Diferentes horas
+                    isSessionTime = true;
+                }
+            }
+            else if (currentHour > sessionStartHour && currentHour < sessionEndHour)
+            {
+                isSessionTime = true;
+            }
+            else if (currentHour == sessionEndHour && currentMinute < sessionEndMinute)
+            {
+                isSessionTime = true;
+            }
 
             if (!isSessionTime)
             {
@@ -167,6 +199,33 @@ namespace NinjaTrader.NinjaScript.Strategies
         {
             get { return takeProfitPips; }
             set { takeProfitPips = value; }
+        }
+
+        [NinjaScriptProperty]
+        [Range(0, 23)]
+        [Display(Name = "Session Start Hour", GroupName = "Session Time", Order = 5)]
+        public int SessionStartHour
+        {
+            get { return sessionStartHour; }
+            set { sessionStartHour = value; }
+        }
+
+        [NinjaScriptProperty]
+        [Range(0, 59)]
+        [Display(Name = "Session Start Minute", GroupName = "Session Time", Order = 6)]
+        public int SessionStartMinute
+        {
+            get { return sessionStartMinute; }
+            set { sessionStartMinute = value; }
+        }
+
+        [NinjaScriptProperty]
+        [Range(1, 480)]
+        [Display(Name = "Session Duration Minutes", GroupName = "Session Time", Order = 7)]
+        public int SessionDurationMinutes
+        {
+            get { return sessionDurationMinutes; }
+            set { sessionDurationMinutes = value; }
         }
     }
 }
