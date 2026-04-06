@@ -37,8 +37,8 @@ namespace NinjaTrader.NinjaScript.Strategies
         // ===== SESSION PARAMETERS =====
         private int sessionStartHour = 9;
         private int sessionStartMinute = 30;
-        private int sessionEndHour = 16;
-        private int sessionEndMinute = 0;
+        private int sessionEndHour = 10;
+        private int sessionEndMinute = 30;
 
         // ===== INTERNAL STATE =====
         private double orbHigh = 0;
@@ -69,13 +69,13 @@ namespace NinjaTrader.NinjaScript.Strategies
             }
             else if (State == State.Configure)
             {
-                AddDataSeries(Data.BarsPeriodType.Minute, 1);
+                AddDataSeries(Data.BarsPeriodType.Minute, 5);
             }
         }
 
         protected override void OnBarUpdate()
         {
-            // Solo operar en timeframe de 1 minuto
+            // Solo operar en timeframe de 5 minutos
             if (BarsInProgress != 1)
                 return;
 
