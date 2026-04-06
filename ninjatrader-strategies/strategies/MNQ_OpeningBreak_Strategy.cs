@@ -25,8 +25,8 @@ namespace NinjaTrader.NinjaScript.Strategies
         // ===== ORB PARAMETERS =====
         private int orbMinutes = 15;               // Opening Range period (15 min)
         private int breakoutConfirmPips = 2;       // Pips needed to confirm breakout
-        private int stopLossPips = 25;             // Stop Loss (Risk)
-        private int takeProfitPips = 75;           // Take Profit (Reward = 3x risk)
+        private int stopLossPips = 150;            // Stop Loss (Risk) - 150 ticks
+        private int takeProfitPips = 176;          // Take Profit (Reward) - 176 ticks
         private int trailingStopPips = 15;         // Trailing Stop (protects profit)
 
         // ===== RISK MANAGEMENT =====
@@ -275,8 +275,8 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
 
         [NinjaScriptProperty]
-        [Range(10, 100)]
-        [Display(Name = "Stop Loss Pips", GroupName = "Risk Management", Order = 3)]
+        [Range(50, 300)]
+        [Display(Name = "Stop Loss Ticks", GroupName = "Risk Management", Order = 3)]
         public int StopLossPips
         {
             get { return stopLossPips; }
@@ -284,8 +284,8 @@ namespace NinjaTrader.NinjaScript.Strategies
         }
 
         [NinjaScriptProperty]
-        [Range(20, 300)]
-        [Display(Name = "Take Profit Pips", GroupName = "Risk Management", Order = 4)]
+        [Range(50, 400)]
+        [Display(Name = "Take Profit Ticks", GroupName = "Risk Management", Order = 4)]
         public int TakeProfitPips
         {
             get { return takeProfitPips; }
