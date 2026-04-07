@@ -2,7 +2,7 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/prisma'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2023-08-16',
 })
 
 export const stripeService = {
@@ -29,7 +29,7 @@ export const stripeService = {
   },
 
   async cancelSubscription(subscriptionId: string) {
-    const subscription = await stripe.subscriptions.del(subscriptionId)
+    const subscription = await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true })
     return subscription
   },
 
@@ -62,22 +62,26 @@ export const stripeService = {
     if (!userId) return
 
     const customer = await stripe.customers.retrieve(customerId)
-    const tier = metadata?.tier || 'pro'
+    const tierName = metadata?.tier || 'pro'
+
+    // Find the subscription tier by name
+    const subscriptionTier = await prisma.subscriptionTier.findFirst({
+      where: { name: tierName }
+    })
+
+    if (!subscriptionTier) return
 
     await prisma.userSubscription.upsert({
       where: { userId },
       create: {
         userId,
-        tier: tier as 'free' | 'pro' | 'elite',
-        stripeCustomerId: customerId,
+        tierId: subscriptionTier.id,
         stripeSubscriptionId: session.subscription as string,
         status: 'active',
-        currentPeriodStart: new Date(session.expires_at * 1000),
-        currentPeriodEnd: new Date((session.expires_at + 2592000) * 1000),
+        endDate: new Date((session.expires_at || Date.now() / 1000 + 2592000) * 1000),
       },
       update: {
-        tier: tier as 'free' | 'pro' | 'elite',
-        stripeCustomerId: customerId,
+        tierId: subscriptionTier.id,
         stripeSubscriptionId: session.subscription as string,
         status: 'active',
       },
@@ -87,20 +91,26 @@ export const stripeService = {
   async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const customerId = subscription.customer as string
     const customer = await stripe.customers.retrieve(customerId)
+    if ('deleted' in customer && customer.deleted) return
     const userId = (customer.metadata as Record<string, string>)?.userId
 
     if (!userId) return
 
-    const tier = subscription.metadata?.tier || 'pro'
-    const status = subscription.status === 'active' ? 'active' : 'inactive'
+    const tierName = subscription.metadata?.tier || 'pro'
+    const status = subscription.status === 'active' ? 'active' : 'cancelled'
+
+    const subscriptionTier = await prisma.subscriptionTier.findFirst({
+      where: { name: tierName }
+    })
+
+    if (!subscriptionTier) return
 
     await prisma.userSubscription.updateMany({
       where: { userId },
       data: {
-        tier: tier as 'free' | 'pro' | 'elite',
+        tierId: subscriptionTier.id,
         status,
-        currentPeriodStart: new Date(subscription.current_period_start * 1000),
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        endDate: new Date(subscription.current_period_end * 1000),
       },
     })
   },
@@ -108,6 +118,7 @@ export const stripeService = {
   async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     const customerId = subscription.customer as string
     const customer = await stripe.customers.retrieve(customerId)
+    if ('deleted' in customer && customer.deleted) return
     const userId = (customer.metadata as Record<string, string>)?.userId
 
     if (!userId) return

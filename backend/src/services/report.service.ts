@@ -30,9 +30,9 @@ export const ReportService = {
     ])
 
     const metrics = calcPeriodMetrics(trades)
-    const initialCapital = portfolio?.initialCapital ?? 10000
-    const startCapital = snapshots[0]?.capital ?? initialCapital
-    const endCapital = snapshots[snapshots.length - 1]?.capital ?? initialCapital
+    const initialCapital = portfolio?.initialCapital ? Number(portfolio.initialCapital) : 10000
+    const startCapital = snapshots[0]?.capital ? Number(snapshots[0].capital) : initialCapital
+    const endCapital = snapshots[snapshots.length - 1]?.capital ? Number(snapshots[snapshots.length - 1].capital) : initialCapital
 
     const days = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
     const months = Math.max(1, days / 30)
@@ -49,8 +49,8 @@ export const ReportService = {
         losingTrades: metrics.losingTrades,
         winRate: metrics.winRate,
         totalProfitLoss: metrics.totalProfitLoss,
-        roi: (metrics.totalProfitLoss / startCapital) * 100,
-        monthlyROI: ((endCapital - startCapital) / startCapital / months) * 100,
+        roi: (metrics.totalProfitLoss / (startCapital as number)) * 100,
+        monthlyROI: ((endCapital - startCapital) / (startCapital as number) / months) * 100,
       },
       performance: {
         averageWin: metrics.averageWin,

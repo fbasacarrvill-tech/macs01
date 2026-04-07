@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 
 export const subscriptionController = {
   async getSubscription(req: Request, res: Response) {
-    const userId = req.user?.id
+    const userId = (req as any).user?.id
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
     const subscription = await prisma.userSubscription.findUnique({
@@ -18,8 +18,8 @@ export const subscriptionController = {
   },
 
   async createCheckoutSession(req: Request, res: Response) {
-    const userId = req.user?.id
-    const userEmail = req.user?.email
+    const userId = (req as any).user?.id
+    const userEmail = (req as any).user?.email
     if (!userId || !userEmail) return res.status(401).json({ error: 'Unauthorized' })
 
     const { tier, priceId } = req.body
@@ -55,7 +55,7 @@ export const subscriptionController = {
   },
 
   async createBillingPortal(req: Request, res: Response) {
-    const userId = req.user?.id
+    const userId = (req as any).user?.id
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
     try {
@@ -63,13 +63,21 @@ export const subscriptionController = {
         where: { userId },
       })
 
-      if (!subscription?.stripeCustomerId) {
+      if (!subscription?.stripeSubscriptionId) {
         return res.status(400).json({ error: 'No active subscription' })
       }
 
+      // For billing portal, we need the customer ID from the subscription
+      // This would be retrieved from Stripe using the subscription ID
+      // For now, we'll use the subscription ID to create the portal session
       const returnUrl = `${process.env.FRONTEND_URL}/settings`
+
+      // Get the Stripe subscription to find the customer
+      const stripeSubscription = await stripeService.getSubscription(subscription.stripeSubscriptionId)
+      const customerId = stripeSubscription.customer as string
+
       const session = await stripeService.createPortalSession(
-        subscription.stripeCustomerId,
+        customerId,
         returnUrl
       )
 
@@ -81,7 +89,7 @@ export const subscriptionController = {
   },
 
   async cancelSubscription(req: Request, res: Response) {
-    const userId = req.user?.id
+    const userId = (req as any).user?.id
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
     try {
