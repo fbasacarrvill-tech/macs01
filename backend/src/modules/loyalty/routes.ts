@@ -5,6 +5,8 @@ import ProgramController from './controllers/program.controller'
 import CustomerController from './controllers/customer.controller'
 import CardController from './controllers/card.controller'
 import TransactionController from './controllers/transaction.controller'
+import NotificationController from './controllers/notification.controller'
+import AnalyticsController from './controllers/analytics.controller'
 
 const router = Router()
 
@@ -98,5 +100,34 @@ router.post('/scan', loyaltyAuthMiddleware, TransactionController.scanCard)
 
 // Process purchase
 router.post('/purchase', loyaltyAuthMiddleware, TransactionController.processPurchase)
+
+// ============ NOTIFICATION ROUTES ============
+// Campaign management
+router.post('/notifications/campaigns', loyaltyAuthMiddleware, NotificationController.createCampaign)
+router.post('/notifications/campaigns/:campaignId/send', loyaltyAuthMiddleware, NotificationController.sendCampaign)
+router.get('/notifications/campaigns/:campaignId/stats', loyaltyAuthMiddleware, NotificationController.getCampaignStats)
+
+// Location-based notifications
+router.post('/notifications/location', loyaltyAuthMiddleware, NotificationController.sendLocationNotification)
+
+// Customer notifications
+router.post('/customers/:customerId/notifications', loyaltyAuthMiddleware, NotificationController.sendToCustomer)
+router.get('/customers/:customerId/notifications/preferences', loyaltyAuthMiddleware, NotificationController.getPreferences)
+
+// Push token management (no auth required - can be called from mobile)
+router.post('/customers/:customerId/push-tokens', NotificationController.registerPushToken)
+
+// Test endpoint (development only)
+router.post('/customers/:customerId/notifications/test', loyaltyAuthMiddleware, NotificationController.testSend)
+
+// ============ ANALYTICS ROUTES ============
+// Program analytics
+router.get('/analytics/programs/:programId/overview', loyaltyAuthMiddleware, AnalyticsController.getProgramOverview)
+router.get('/analytics/programs/:programId/time-based', loyaltyAuthMiddleware, AnalyticsController.getTimeBasedAnalytics)
+router.get('/analytics/programs/:programId/segmentation', loyaltyAuthMiddleware, AnalyticsController.getCustomerSegmentation)
+router.get('/analytics/programs/:programId/roi', loyaltyAuthMiddleware, AnalyticsController.getROI)
+
+// Customer analytics
+router.get('/analytics/customers/:customerId', loyaltyAuthMiddleware, AnalyticsController.getCustomerAnalytics)
 
 export default router
