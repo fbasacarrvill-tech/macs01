@@ -13,6 +13,7 @@ import usersRoutes from './routes/users.routes'
 import reportsRoutes from './routes/reports.routes'
 import subscriptionsRoutes from './routes/subscriptions.routes'
 import webhookRoutes from './routes/webhook.routes'
+import loyaltyRoutes from './modules/loyalty/routes'
 import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -39,6 +40,7 @@ app.use('/api/strategies', strategiesRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/reports', reportsRoutes)
 app.use('/api/subscriptions', subscriptionsRoutes)
+app.use('/api/loyalty', loyaltyRoutes)
 
 // ─── Error Handler ───────────────────────────────────────────────────────────
 app.use(errorHandler)
