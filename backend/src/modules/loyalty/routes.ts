@@ -7,6 +7,7 @@ import CardController from './controllers/card.controller'
 import TransactionController from './controllers/transaction.controller'
 import NotificationController from './controllers/notification.controller'
 import AnalyticsController from './controllers/analytics.controller'
+import WalletController from './controllers/wallet.controller'
 
 const router = Router()
 
@@ -129,5 +130,19 @@ router.get('/analytics/programs/:programId/roi', loyaltyAuthMiddleware, Analytic
 
 // Customer analytics
 router.get('/analytics/customers/:customerId', loyaltyAuthMiddleware, AnalyticsController.getCustomerAnalytics)
+
+// ============ WALLET ROUTES ============
+// Wallet pass generation (can be public for direct sharing)
+router.get('/wallet/apple/:cardId', WalletController.getAppleWalletPass)
+router.get('/wallet/google/:cardId', WalletController.getGoogleWalletJWT)
+router.get('/wallet/pass/:cardId', WalletController.getWalletPassData)
+
+// Wallet management (requires authentication)
+router.post('/cards/:cardId/add-to-wallet', loyaltyAuthMiddleware, WalletController.addToWallet)
+router.put('/cards/:cardId/update-in-wallet', loyaltyAuthMiddleware, WalletController.updateInWallet)
+router.delete('/cards/:cardId/remove-from-wallet', loyaltyAuthMiddleware, WalletController.removeFromWallet)
+
+// Wallet provider status
+router.get('/wallet/status', WalletController.getWalletStatus)
 
 export default router
