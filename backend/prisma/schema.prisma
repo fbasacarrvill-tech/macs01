@@ -241,3 +241,343 @@ model UserSubscription {
 
   @@index([userId])
 }
+
+// ========== LOYALTY REWARDS MODULE ==========
+
+// ========== BUSINESS (Loyalty Program Owner) ==========
+model Business {
+  id                    String    @id @default(uuid())
+  name                  String
+  email                 String    @unique
+  phone                 String?
+  website               String?
+  logoUrl               String?
+
+  // Branding
+  primaryColor          String    @default("#3B82F6")
+  secondaryColor        String    @default("#1F2937")
+
+  // Status
+  status                String    @default("ACTIVE")
+  isEmailVerified       Boolean   @default(false)
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  programs              LoyaltyProgram[]
+  apiKeys               BusinessApiKey[]
+
+  @@index([email])
+  @@index([status])
+}
+
+// ========== BUSINESS API KEYS ==========
+model BusinessApiKey {
+  id                    String    @id @default(uuid())
+  businessId            String
+  business              Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  key                   String    @unique
+  secret                String
+  name                  String
+  isActive              Boolean   @default(true)
+
+  lastUsedAt            DateTime?
+  createdAt             DateTime  @default(now())
+
+  @@index([businessId])
+  @@index([key])
+}
+
+// ========== LOYALTY PROGRAMS ==========
+model LoyaltyProgram {
+  id                    String    @id @default(uuid())
+  businessId            String
+  business              Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  name                  String
+  description           String?
+  type                  String
+
+  currencyCode          String    @default("USD")
+  pointsName            String    @default("Points")
+  pointsPerDollar       Decimal   @default(1.0)
+
+  logoUrl               String?
+  backgroundColor       String    @default("#FFFFFF")
+  foregroundColor       String    @default("#000000")
+  accentColor           String    @default("#3B82F6")
+
+  minPointsRedeemable   Int       @default(100)
+  expirationDays        Int?
+
+  isActive              Boolean   @default(true)
+  publishedAt           DateTime?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  cards                 LoyaltyCard[]
+  customers             CustomerProgram[]
+  tiers                 LoyaltyTier[]
+  rules                 ProgramRule[]
+  transactions          Transaction[]
+  campaigns             Campaign[]
+  analytics             ProgramAnalytics?
+
+  @@index([businessId])
+  @@index([type])
+  @@index([isActive])
+}
+
+// ========== LOYALTY TIERS ==========
+model LoyaltyTier {
+  id                    String    @id @default(uuid())
+  programId             String
+  program               LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  name                  String
+  requiredPoints        Int
+  discount              Decimal   @default(0)
+  color                 String    @default("#C0C0C0")
+
+  createdAt             DateTime  @default(now())
+
+  @@index([programId])
+  @@unique([programId, name])
+}
+
+// ========== PROGRAM RULES ==========
+model ProgramRule {
+  id                    String    @id @default(uuid())
+  programId             String
+  program               LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  type                  String
+  condition             String
+  reward                String
+
+  isActive              Boolean   @default(true)
+
+  @@index([programId])
+}
+
+// ========== CUSTOMERS ==========
+model Customer {
+  id                    String    @id @default(uuid())
+
+  email                 String    @unique
+  phone                 String?
+  firstName             String?
+  lastName              String?
+
+  country               String    @default("US")
+  state                 String?
+  city                  String?
+  zipCode               String?
+
+  language              String    @default("en")
+  timeZone              String    @default("UTC")
+
+  notificationsOptIn    Boolean   @default(true)
+  pushTokens            String[]
+
+  isActive              Boolean   @default(true)
+  lastActivityAt        DateTime?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  programs              CustomerProgram[]
+  cards                 LoyaltyCard[]
+  transactions          Transaction[]
+  segments              CustomerSegment[]
+  pushNotifications     PushNotification[]
+
+  @@index([email])
+  @@index([isActive])
+  @@index([country])
+}
+
+// ========== CUSTOMER PROGRAM ENROLLMENT ==========
+model CustomerProgram {
+  id                    String    @id @default(uuid())
+  customerId            String
+  customer              Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  programId             String
+  program               LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  enrolledAt            DateTime  @default(now())
+  tierLevel             String?
+
+  @@unique([customerId, programId])
+  @@index([customerId])
+  @@index([programId])
+}
+
+// ========== LOYALTY CARDS ==========
+model LoyaltyCard {
+  id                    String    @id @default(uuid())
+  programId             String
+  program               LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  customerId            String
+  customer              Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  cardNumber            String
+  barcode               String?
+  qrCode                String?
+
+  status                String    @default("ACTIVE")
+
+  points                Int       @default(0)
+  totalPointsEarned     Int       @default(0)
+  totalPointsRedeemed   Int       @default(0)
+
+  passUrl               String?
+  jwtToken              String?
+  walletType            String?
+  addedToWalletAt       DateTime?
+
+  issuedAt              DateTime  @default(now())
+  expiresAt             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  transactions          Transaction[]
+  scans                 CardScan[]
+
+  @@index([programId])
+  @@index([customerId])
+  @@index([status])
+  @@unique([customerId, programId])
+}
+
+// ========== TRANSACTIONS ==========
+model Transaction {
+  id                    String    @id @default(uuid())
+  cardId                String
+  card                  LoyaltyCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  customerId            String
+  customer              Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  programId             String
+  program               LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  type                  String
+  amount                Decimal?
+  points                Int
+  pointsBalance         Int
+
+  description           String?
+  referenceId           String?
+  metadata              String?
+
+  createdAt             DateTime  @default(now())
+
+  @@index([cardId])
+  @@index([customerId])
+  @@index([programId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ========== CARD SCANS ==========
+model CardScan {
+  id                    String    @id @default(uuid())
+  cardId                String
+  card                  LoyaltyCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  latitude              Decimal?
+  longitude             Decimal?
+  location              String?
+
+  isValid               Boolean   @default(true)
+  errorMessage          String?
+
+  scannedAt             DateTime  @default(now())
+
+  @@index([cardId])
+  @@index([scannedAt])
+}
+
+// ========== CUSTOMER SEGMENTS ==========
+model CustomerSegment {
+  id                    String    @id @default(uuid())
+
+  name                  String    @unique
+  criteria              String
+
+  customers             Customer[]
+  campaigns             Campaign[]
+}
+
+// ========== PUSH NOTIFICATION CAMPAIGNS ==========
+model Campaign {
+  id                    String    @id @default(uuid())
+  programId             String
+  program               LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  title                 String
+  message               String
+  imageUrl              String?
+
+  targetSegments        CustomerSegment[]
+  targetGeolocation     String?
+
+  status                String    @default("DRAFT")
+  scheduledFor          DateTime?
+  startedAt             DateTime?
+  endedAt               DateTime?
+
+  sentCount             Int       @default(0)
+  openCount             Int       @default(0)
+  clickCount            Int       @default(0)
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([programId])
+  @@index([status])
+}
+
+// ========== PUSH NOTIFICATIONS QUEUE ==========
+model PushNotification {
+  id                    String    @id @default(uuid())
+  customerId            String
+  customer              Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  title                 String
+  body                  String
+  imageUrl              String?
+  deepLink              String?
+
+  status                String    @default("PENDING")
+  failureReason         String?
+
+  campaignId            String?
+
+  sentAt                DateTime?
+  createdAt             DateTime  @default(now())
+
+  @@index([customerId])
+  @@index([status])
+}
+
+// ========== PROGRAM ANALYTICS ==========
+model ProgramAnalytics {
+  id                    String    @id @default(uuid())
+  programId             String    @unique
+  program               LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  totalCustomers        Int       @default(0)
+  activeCards           Int       @default(0)
+  totalPoints           Int       @default(0)
+  totalPointsRedeemed   Int       @default(0)
+
+  totalScans            Int       @default(0)
+  totalTransactions     Int       @default(0)
+  avgPointsPerCustomer  Decimal   @default(0)
+
+  totalRevenue          Decimal   @default(0)
+
+  updatedAt             DateTime  @updatedAt
+}
